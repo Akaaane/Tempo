@@ -127,6 +127,9 @@
     background: var(--card); color: var(--ink); font-family: inherit; font-size: 16px; transition: border-color .15s;
   }
   input:focus, textarea:focus { border-color: var(--accent-2); outline: none; }
+  input.invalid, textarea.invalid { border-color: var(--no); }
+  input.invalid:focus, textarea.invalid:focus { border-color: var(--no); }
+  .field-error { color: var(--no); font-size: 13px; font-weight: 600; margin-top: 6px; }
   textarea { resize: vertical; min-height: 64px; }
   input[type=date]::-webkit-calendar-picker-indicator { opacity: .7; cursor: pointer; }
   .or-sep { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
@@ -137,7 +140,7 @@
 
   .toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--surface-2); border: 1.5px solid var(--border); border-radius: 8px; padding: 5px; }
   .toggle button { border: 1.5px solid transparent; background: transparent; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 14.5px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .toggle button.on { background: var(--card); color: var(--ink); border-color: var(--accent-2); }
+  .toggle button.on { background: var(--card); color: var(--ink); }
   .dates-row { display: flex; gap: 12px; }
   .dates-row .field { flex: 1; margin-bottom: 0; }
   @media (max-width: 440px) { .dates-row { flex-direction: column; gap: 16px; } }
@@ -323,6 +326,20 @@
     const head = w.join(" ");
     return (head ? esc(head) + " " : "") + `<span class="hl">${esc(last)}</span>`;
   };
+  function showError(el, msg) {
+    if (!el) return;
+    el.classList.add("invalid");
+    const field = el.closest(".field") || el.parentElement;
+    let e = field.querySelector(".field-error");
+    if (!e) { e = document.createElement("div"); e.className = "field-error"; field.appendChild(e); }
+    e.textContent = msg;
+    el.focus();
+    el.addEventListener("input", function clear() {
+      el.classList.remove("invalid");
+      if (e && e.parentElement) e.remove();
+      el.removeEventListener("input", clear);
+    });
+  }
   const genId = (n = 9) => {
     const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = "";
     const r = crypto.getRandomValues(new Uint8Array(n));
@@ -481,9 +498,9 @@
     let step = 1, maxStep = 1;
     let db = null; getDB().then((x) => { db = x; });
     const draft = {
-      organizer: lsGet("creneau_org") || "",
+      organizer: "",
       name: "", place: "", mode: "range",
-      start: isoOffset(1), end: isoOffset(7), single: isoOffset(7), criteria: "",
+      start: isoOffset(0), end: isoOffset(6), single: isoOffset(0), criteria: "",
     };
     let dates = [];
     let eid = null, rid = null;
@@ -579,7 +596,7 @@
           <button class="btn" id="w-next">Continuer <i class="fa-solid fa-arrow-right"></i></button>
         </div>`;
       const inp = document.getElementById("f-org"); inp.focus();
-      const go = () => { const v = inp.value.trim(); if (!v) { inp.focus(); toast("Indique ton nom", "fa-circle-exclamation"); return; } draft.organizer = v; lsSet("creneau_org", v); goto(2); };
+      const go = () => { const v = inp.value.trim(); if (!v) { showError(inp, "Indique ton nom pour continuer."); return; } draft.organizer = v; lsSet("creneau_org", v); goto(2); };
       document.getElementById("w-next").addEventListener("click", go);
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
     }
@@ -637,7 +654,7 @@
       const nextBtn = document.getElementById("w-next");
       nextBtn.addEventListener("click", async () => {
         capture();
-        if (!draft.name) { document.getElementById("f-name").focus(); toast("Donne un nom à l'évènement", "fa-circle-exclamation"); return; }
+        if (!draft.name) { showError(document.getElementById("f-name"), "Donne un nom à l'évènement."); return; }
         const nd = computeDates();
         if (!nd.length) { toast("Choisis une date valide (période ≤ 90 j)", "fa-circle-exclamation"); return; }
         dates = nd; syncAvail();
@@ -672,7 +689,7 @@
       body.innerHTML = `
         <div class="card panel">
           <h2 class="card-title">Tes disponibilités</h2>
-          <div class="sub">Clique sur les cases de <b>ta ligne</b> pour indiquer ton vote entre oui, non ou indécis.</div>
+          <div class="sub">Clique sur la ou les cases de <b>ta colonne</b> pour indiquer ton vote entre oui, non ou indécis.</div>
           <div id="edit-grid"></div>
           <div class="save-row">
             <button class="btn ghost" id="w-back"><i class="fa-solid fa-arrow-left"></i> Retour</button>
@@ -762,7 +779,7 @@
 
     const rKey = "creneau_resp_" + eid;
     let myRid = lsGet(rKey) || null;
-    let myName = lsGet(rKey + "_name") || lsGet("creneau_org") || "";
+    let myName = lsGet(rKey + "_name") || "";
     const myAvail = {}; dates.forEach((d) => (myAvail[d] = "maybe"));
 
     const shareUrl = location.origin + location.pathname + "#e=" + eid;
@@ -848,7 +865,7 @@
       body.innerHTML = `
         <div class="card form-card">
           <h2 class="card-title">Bienvenue</h2>
-          <p class="form-intro">Tu es invité·e à <b>${esc(data.name)}</b>. Indique ton nom pour rejoindre l'évènement.</p>
+          <p class="form-intro">Tu es invité·e à l'évènement <b>${esc(data.name)}</b>. Indique ton nom pour inscrire tes disponibilités.</p>
           <div class="field">
             <label class="lbl" for="w-name"><i class="fa-solid fa-user"></i> Ton nom</label>
             <input type="text" id="w-name" maxlength="40" placeholder="Karim" value="${esc(myName)}" autocomplete="name">
@@ -868,7 +885,7 @@
       inp.focus();
       const go = () => {
         const nm = inp.value.trim();
-        if (!nm) { inp.focus(); toast("Indique ton nom", "fa-circle-exclamation"); return; }
+        if (!nm) { showError(inp, "Indique ton nom pour continuer."); return; }
         myName = nm; lsSet(rKey + "_name", nm);
         goto(2);
       };
@@ -924,7 +941,7 @@
         </div>
         <div class="card panel">
           <h2 class="card-title">Tes disponibilités</h2>
-          <div class="sub">Clique sur les cases de <b>ta ligne</b> pour indiquer ton vote entre oui, non ou indécis.</div>
+          <div class="sub">Clique sur la ou les cases de <b>ta colonne</b> pour indiquer ton vote entre oui, non ou indécis.</div>
           <div id="edit-grid"></div>
           <div class="save-row">
             <button class="btn ghost" id="w-back"><i class="fa-solid fa-arrow-left"></i> Retour</button>
