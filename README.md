@@ -1,6 +1,6 @@
 # Tempo — déploiement Vercel + Neon
 
-Sondage de disponibilités (façon Doodle), **web + PWA installable** sur iOS/Android.
+Sondage de disponibilités, **web + PWA installable** sur iOS/Android.
 Front statique + fonctions serverless (`/api`) + base **Neon (Postgres)**.
 
 ```
@@ -64,24 +64,7 @@ npm i -g vercel
 vercel dev          # sert le front + les fonctions, avec DATABASE_URL dans .env
 ```
 
-## Dépannage (les pièges rencontrés lors du 1er déploiement)
-- **Page 404 / vide sur le site** → le dépôt GitHub doit contenir les fichiers de l'app
-  **à la racine** (`index.html` tout en haut). Piège fréquent avec GitHub Desktop : « Add
-  local repository » puis « create a repository » peut créer un **dépôt vide dans un
-  sous-dossier**. Vérifie que le dépôt publié contient bien `index.html`, `api/`, etc.
-- **Déploiement « BLOCKED » sur Vercel** → Vercel bloque les déploiements dont l'**auteur du
-  commit** n'est pas relié à ton compte. Commit avec ton identité GitHub (via GitHub Desktop),
-  ou `git config user.email` = l'email de ton compte GitHub.
-- **Tes invités tombent sur une page de connexion Vercel** → désactive la protection :
-  projet → **Settings → Deployment Protection → Vercel Authentication → Disabled → Save**.
-  (Indispensable pour un sondage public.)
-- **L'API renvoie une erreur / créer un évènement échoue** → la variable **`DATABASE_URL`**
-  n'est pas définie : projet → **Settings → Environment Variables** → ajoute-la (ta clé Neon)
-  → puis **Redeploy**.
-
 ## Notes
-- **Sécurité** : comme Doodle, un lien public est modifiable par quiconque l'a. Simple par
-  design. On peut ajouter un jeton d'édition par réponse et une limitation de débit si besoin.
 - **Neon gratuit** : la base se met en veille après ~5 min d'inactivité et se réveille à la
   première requête (léger délai au premier chargement). Aucune donnée perdue.
 - **Coût** : gratuit à petite échelle (Vercel Hobby non commercial + Neon Free).
