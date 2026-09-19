@@ -1,0 +1,10 @@
+{
+  "name": "tempo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tempo — sondage de disponibilités (Vercel + Neon)",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.4"
+  }
+}
